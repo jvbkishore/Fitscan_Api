@@ -1,0 +1,6 @@
+@Fitscan_Api_HostAddress = http://localhost:5129
+
+GET {{Fitscan_Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
