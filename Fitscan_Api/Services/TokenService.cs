@@ -25,14 +25,22 @@ namespace Fitscan.API.Services
                 new Claim(ClaimTypes.Role, user.Role)
             };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+
+            var keydata = Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("JWT_KEY")) ?? Encoding.UTF8.GetBytes(_config["Jwt:Key"]);
+            var key = new SymmetricSecurityKey(keydata);
+
+            var issuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? _config["QJwt:Issuer"];
+            var audience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? _config["Jwt:Audience"];
+
+
+            
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(Convert.ToDouble(_config["Jwt:DurationInMinutes"])),
+                expires: DateTime.Now.AddMinutes(Convert.ToDouble(23)),
                 signingCredentials: creds
             );
 
