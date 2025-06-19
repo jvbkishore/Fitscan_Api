@@ -68,7 +68,13 @@ namespace Fitscan_Api.Controllers
                 await _context.SaveChangesAsync();
 
                 var tokenHandler = new JwtSecurityTokenHandler();
-                var key = Encoding.UTF8.GetBytes(_configuration["QRJwt:Key"]);
+                
+
+                var key = Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("QR_JWT_KEY") ?? _configuration["QRJwt:Key"]);
+
+                var issuer = Environment.GetEnvironmentVariable("QR_JWT_ISSUER") ?? _configuration["QRJwt:Issuer"];
+                var audience = Environment.GetEnvironmentVariable("QR_JWT_AUDIENCE") ?? _configuration["QRJwt:Audience"];
+
 
                 var tokenDescriptor = new SecurityTokenDescriptor
                 {
@@ -79,8 +85,8 @@ namespace Fitscan_Api.Controllers
                         new Claim(JwtRegisteredClaimNames.Jti, tokenId.ToString())
                     }),
                     Expires = expiresAt,
-                    Issuer = _configuration["QRJwt:Issuer"],
-                    Audience = _configuration["QRJwt:Audience"],
+                    Issuer = issuer,
+                    Audience = audience,
                     SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
                 };
 
