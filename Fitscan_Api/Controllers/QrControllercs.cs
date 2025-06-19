@@ -1,15 +1,16 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Reflection.Metadata.Ecma335;
-using System.Security.Claims;
-using System.Text;
-using Fitscan.API.Data;
+﻿using Fitscan.API.Data;
 using Fitscan.API.Models;
 using Fitscan_Api.DTOs;
+using Fitscan_Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Reflection.Metadata.Ecma335;
+using System.Security.Claims;
+using System.Text;
 
 namespace Fitscan_Api.Controllers
 {
@@ -97,7 +98,7 @@ namespace Fitscan_Api.Controllers
 
 
 
-        [Authorize]
+        
         [HttpPost("scan")]
 
         public async Task<IActionResult> ValidateQrToken([FromBody] string token)
@@ -137,6 +138,19 @@ namespace Fitscan_Api.Controllers
                 qr.IsUsed = true;
                 await _context.SaveChangesAsync();
 
+
+                var checkIn = new CheckInDetails
+                {
+                    Username = qr.Username,
+                    Gymcode = qr.OrgID,
+                    Checkintime = DateTime.UtcNow,
+                    QrCodeId = qr.TokenId.ToString(),
+                    Active = true
+                };
+
+                _context.CheckInDetails.Add(checkIn);
+                await _context.SaveChangesAsync();
+
                 return Ok(new { success = true, message = "Check-in successful", username = qr.Username, orgId = qr.OrgID });
             }
             catch (SecurityTokenExpiredException)
@@ -150,10 +164,52 @@ namespace Fitscan_Api.Controllers
         }
 
 
+        [Authorize]
+        [HttpGet("activecheckin/{username}")]
+        public async Task<IActionResult> GetActiveCheckIn(string username)
+        {
+            var checkIn = await _context.CheckInDetails
+                .Where(c => c.Username.ToLower() == username.ToLower() && c.Active)
+                .OrderByDescending(c => c.Checkintime)
+                .FirstOrDefaultAsync();
+
+            if (checkIn == null)
+                return Ok(new { success = true, isCheckedIn = false });
+
+            return Ok(new
+            {
+                success = true,
+                isCheckedIn = true,
+                checkintime = checkIn.Checkintime,
+                gymcode = checkIn.Gymcode
+            });
+        }
+
+
+        [Authorize]
+        [HttpPost("checkout/{username}")]
+        public async Task<IActionResult> CheckoutUser(string username)
+        {
+            var checkIn = await _context.CheckInDetails
+                .Where(c => c.Username.ToLower() == username.ToLower() && c.Active)
+                .OrderByDescending(c => c.Checkintime)
+                .FirstOrDefaultAsync();
+
+            if (checkIn == null)
+                return NotFound(new { success = false, message = "No active check-in found." });
+
+            checkIn.Checkouttime = DateTime.UtcNow;
+            checkIn.Active = false;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "User checked out successfully." });
+        }
 
 
 
-        
+
+        [Authorize]
         [HttpPost("getcheckindetails")]
         public async Task<IActionResult> GetCheckInDetails([FromBody] string gymcode)
         {
