@@ -110,7 +110,11 @@ namespace Fitscan_Api.Controllers
         public async Task<IActionResult> ValidateQrToken([FromBody] string token)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(_configuration["QRJwt:Key"]);
+            
+            var key = Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("QR_JWT_KEY") ?? _configuration["QRJwt:Key"]);
+            var issuer = Environment.GetEnvironmentVariable("QR_JWT_ISSUER") ?? _configuration["QRJwt:Issuer"];
+            var audience = Environment.GetEnvironmentVariable("QR_JWT_AUDIENCE") ?? _configuration["QRJwt:Audience"];
+
 
             try
             {
@@ -120,8 +124,8 @@ namespace Fitscan_Api.Controllers
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = _configuration["QRJwt:Issuer"],
-                    ValidAudience = _configuration["QRJwt:Audience"],
+                    ValidIssuer = issuer,
+                    ValidAudience = audience,
                     IssuerSigningKey = new SymmetricSecurityKey(key)
                 }, out SecurityToken validatedToken);
 
